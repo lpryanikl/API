@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: API для отслеживания личных привычек и ежедневного прогресса.
 servers:
-  - url: []
+  - url: https://api.example.com/v1
 tags:
   - name: Habits
     description: Управление привычками
