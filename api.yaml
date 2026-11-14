@@ -1,1 +1,256 @@
+openapi: 3.0.3
+info:
+  title: API трекера привычек
+  version: 1.0.0
+  description: API для отслеживания личных привычек и ежедневного прогресса.
+servers:
+  - url: []
+tags:
+  - name: Habits
+    description: Управление привычками
+paths:
+  /habits:
+    get:
+      tags: [Habits]
+      summary: Получить список привычек текущего пользователя
+      operationId: listHabits
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: Включить архивные привычки, если значение равно true.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Список привычек
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HabitResponse'
+                  total:
+                    type: integer
+                    format: int32
+                    minimum: 0
+        '401':
+          description: Токен аутентификации отсутствует или недействителен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [Habits]
+      summary: Создать привычку
+      operationId: createHabit
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HabitCreateRequest'
+      responses:
+        '201':
+          description: Привычка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HabitResponse'
+        '400':
+          description: Запрос содержит некорректные данные привычки.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Токен аутентификации отсутствует или недействителен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /habits/{habitId}:
+    parameters:
+      - name: habitId
+        in: path
+        required: true
+        description: Публичный идентификатор привычки.
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Habits]
+      summary: Получить одну привычку
+      operationId: getHabit
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Данные привычки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HabitResponse'
+        '401':
+          description: Токен аутентификации отсутствует или недействителен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Привычка не существует или не принадлежит текущему пользователю.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [Habits]
+      summary: Обновить выбранные поля привычки
+      operationId: updateHabit
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HabitUpdateRequest'
+      responses:
+        '200':
+          description: Привычка обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HabitResponse'
+        '400':
+          description: Запрос содержит некорректные данные для обновления.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Привычка не найдена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Habits]
+      summary: Удалить привычку
+      operationId: deleteHabit
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Привычка успешно удалена.
+        '401':
+          description: Токен аутентификации отсутствует или недействителен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Привычка не найдена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HabitCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [name, frequency]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Пить воду
+        description:
+          type: string
+          maxLength: 500
+          example: Выпивать восемь стаканов в день.
+        frequency:
+          type: string
+          enum: [daily, weekly]
+        targetPerWeek:
+          type: integer
+          minimum: 1
+          maximum: 7
+          default: 7
+    HabitUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        frequency:
+          type: string
+          enum: [daily, weekly]
+        targetPerWeek:
+          type: integer
+          minimum: 1
+          maximum: 7
+        archived:
+          type: boolean
+    HabitResponse:
+      type: object
+      additionalProperties: false
+      required: [id, name, frequency, targetPerWeek, archived, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        description:
+          type: string
+        frequency:
+          type: string
+          enum: [daily, weekly]
+        targetPerWeek:
+          type: integer
+        archived:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: HABIT_NOT_FOUND
+        message:
+          type: string
+          example: Привычка не найдена.
 
